@@ -1,4 +1,4 @@
-pyttx3
+pyttsx3
 Pillow
 datetime
 pytesseract
