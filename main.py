@@ -1,108 +1,147 @@
-import socket
-import select
-import sys
-from threading import *
- 
-"""The first argument AF_INET is the address domain of the
-socket. This is used when we have an Internet Domain with
-any two hosts The second argument is the type of socket.
-SOCK_STREAM means that data or characters are read in
-a continuous flow."""
-server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
- 
-# checks whether sufficient arguments have been provided
-if len(sys.argv) != 3:
-    print ("Correct usage: script, IP address, port number")
-    exit()
- 
-# takes the first argument from command prompt as IP address
-IP_address = str(sys.argv[1])
- 
-# takes second argument from command prompt as port number
-Port = int(sys.argv[2])
- 
-"""
-binds the server to an entered IP address and at the
-specified port number.
-The client must be aware of these parameters
-"""
-server.bind((IP_address, Port))
- 
-"""
-listens for 100 active connections. This number can be
-increased as per convenience.
-"""
-server.listen(100)
- 
-list_of_clients = []
- 
-def clientthread(conn, addr):
- 
-    # sends a message to the client whose user object is conn
-    conn.send("Welcome to this chatroom!")
- 
+from PIL import Image as IImage
+import pytesseract
+import os, json
+from datetime import datetime
+from PIL import ImageTk
+from tkinter import *
+import time
+import pyttsx3
+import threading
+from tkinter import ttk
+def ocr_core(filename):
+    text = pytesseract.image_to_string(IImage.open(filename), lang='tur')
+    return text
+
+def format():
+    listOfFiles = os.listdir(path='pagess')
+    x = 0
+    for file in sorted(listOfFiles):
+        img = IImage.open("pagess/" + file)
+        width, height = img.size
+        img_left_area = (0, 0, (width/2), height)
+        img_right_area = ((width/2), 0, width, height)
+        img_left = img.crop(img_left_area)
+        img_right = img.crop(img_right_area)
+        img_left.save("pagess/" + str(x) + ".jpg")
+        x+=1
+        img_right.save("pagess/" + str(x) + ".jpg")
+        x+=1
+        os.unlink("pagess/" + file)
+    return True
+
+pages = list()
+start = round(datetime.now().timestamp())
+listOfFiles = os.listdir(path='pagess')
+listOfFiles = str(json.dumps(listOfFiles)).replace(".jpg", "")
+listOfFiles = json.loads(listOfFiles)
+listOfFiles = [int(i) for i in listOfFiles]
+
+#for page in sorted(listOfFiles):
+    #page_text = ocr_core("pages/" + str(page) + ".jpg")
+    #open("texts/"+str(page)+".txt", "a").write(page_text)
+    #pages.append(page_text)
+
+pages = sorted(listOfFiles)
+
+for x in pages:
+    pages[x] = ("pagess/" + str(x) + ".jpg")
+
+window = Tk()
+window.title("BookReader v1.0")
+window.geometry("1400x800")
+
+nowPage1 = 0
+nowPage2 = 1
+
+bookPagesFrame = ttk.LabelFrame(window, text="")
+bookPagesFrame.pack(side = "right", fill = "both", expand = "yes")
+pageSide1 = ttk.Label(bookPagesFrame)
+pageSide2 = ttk.Label(bookPagesFrame)
+
+def addPages(pageNum, side):
+    pageImg1 = IImage.open(str(pages[int(pageNum)]))
+    pageImg1 = pageImg1.resize((500, 700), IImage.ANTIALIAS)
+    page1 = ImageTk.PhotoImage(pageImg1)
+    if side == "left":
+        pageSide1.configure(image=page1)
+        pageSide1.image=page1
+    else:
+        pageSide2.configure(image=page1)
+        pageSide2.image=page1
+
+def setPages():
+    global nowPage1, nowPage2
+    addPages(nowPage1, "left")
+    addPages(nowPage2, "right")
+
+def previousPage():
+    global nowPage1, nowPage2
+    nowPage1 = nowPage1 - 2
+    nowPage2 = nowPage2 - 2
+    setPages()
+
+def nextPage():
+    global nowPage1, nowPage2
+    nowPage1 = nowPage1 + 2
+    nowPage2 = nowPage2 + 2
+    setPages()
+
+def start():
+    global nowPage1, nowPage2
+    nowPage1 = 0
+    nowPage2 = 1
+    addPages(nowPage1, "left")
+    addPages(nowPage2, "right")
+    buttonStart.configure(text="Reset")
+
+manageFrame = ttk.LabelFrame(window, text="")
+manageFrame.pack(side = "left", fill = "both", expand = "yes")
+
+buttonStart = ttk.Button(manageFrame, text ="Start", command=lambda:start())
+buttonStart.grid(column=1, row=0)
+
+buttonNext = ttk.Button(manageFrame, text ="→", command=lambda:nextPage())
+buttonNext.grid(column=1, row=1)
+
+buttonPrevious = ttk.Button(manageFrame, text ="←", command=lambda:previousPage())
+buttonPrevious.grid(column=1, row=2)
+
+pageSide1.pack(side="left", fill="both", expand="yes")
+pageSide2.pack(side="right", fill="both", expand="yes")
+
+def startReading():
+    engine = pyttsx3.init()
+    engine.setProperty('voice', 'com.apple.speech.synthesis.voice.yelda.premium')
+    engine.setProperty('rate', 185)
+    engine.startLoop()
+    turn = 0
     while True:
-            try:
-                message = conn.recv(2048)
-                if message:
- 
-                    """prints the message and address of the
-                    user who just sent the message on the server
-                    terminal"""
-                    print ("<" + addr[0] + "> " + message)
- 
-                    # Calls broadcast function to send message to all
-                    message_to_send = "<" + addr[0] + "> " + message
-                    broadcast(message_to_send, conn)
- 
-                else:
-                    """message may have no content if the connection
-                    is broken, in this case we remove the connection"""
-                    remove(conn)
- 
-            except:
-                continue
- 
-"""Using the below function, we broadcast the message to all
-clients who's object is not the same as the one sending
-the message """
-def broadcast(message, connection):
-    for clients in list_of_clients:
-        if clients!=connection:
-            try:
-                clients.send(message)
-            except:
-                clients.close()
- 
-                # if the link is broken, we remove the client
-                remove(clients)
- 
-"""The following function simply removes the object
-from the list that was created at the beginning of
-the program"""
-def remove(connection):
-    if connection in list_of_clients:
-        list_of_clients.remove(connection)
- 
-while True:
- 
-    """Accepts a connection request and stores two parameters,
-    conn which is a socket object for that user, and addr
-    which contains the IP address of the client that just
-    connected"""
-    conn, addr = server.accept()
- 
-    """Maintains a list of clients for ease of broadcasting
-    a message to all available people in the chatroom"""
-    list_of_clients.append(conn)
- 
-    # prints the address of the user that just connected
-    print (addr[0] + " connected")
- 
-    # creates and individual thread for every user
-    # that connects
-    Thread(target=clientthread, daemon=True, args=(conn,addr)).start   
- 
-conn.close()
-server.close()
+        global nowPage1
+        if nowPage2 == len(pages):
+            break
+        if engine.isBusy()==False:
+            if turn ==1:
+                nowPage1 = nowPage1 -2
+                nextPage()
+                turn = 0
+            print(nowPage1)
+            page_text = ocr_core(pages[nowPage1])
+            engine.say(page_text)
+            booli = nowPage1%2==0
+            if booli == False:
+                turn = 1
+            nowPage1 = nowPage1 +1
+        time.sleep(1)
+
+threads = list()
+
+def readingThread():
+    threading.Thread(target=startReading, daemon=True, args = ()).start()
+
+buttonStartReading = ttk.Button(manageFrame, text ="Start Reading", command=lambda:readingThread())
+buttonStartReading.grid(column=1, row=3)
+
+buttonStopReading = ttk.Button(manageFrame, text ="Stop Reading", command=lambda:print(threads))
+buttonStopReading.grid(column=1, row=4)
+
+window.mainloop()

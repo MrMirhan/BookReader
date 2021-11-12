@@ -1,0 +1,5 @@
+pyttx3
+Pillow
+datetime
+pytesseract
+tkinter
