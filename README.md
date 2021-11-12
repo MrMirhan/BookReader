@@ -5,7 +5,7 @@ Personal project for training myself. I had to read a book but I really don't wa
 # How To Install
 
 ```shell
-$ git clone git://https://git.github.com/x.git
+$ git clone git://github.com/MrMirhan/BookReader.git
 $ cd BookReader
 $ python -m pip install -r requirements.txt
 ```
