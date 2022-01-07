@@ -8,6 +8,7 @@ import time
 import pyttsx3
 import threading
 from tkinter import ttk
+
 def ocr_core(filename):
     text = pytesseract.image_to_string(IImage.open(filename), lang='tur')
     return text
@@ -22,16 +23,16 @@ def format():
         img_right_area = ((width/2), 0, width, height)
         img_left = img.crop(img_left_area)
         img_right = img.crop(img_right_area)
-        img_left.save("pagess/" + str(x) + ".jpg")
+        img_left.save("pages/" + str(x) + ".jpg")
         x+=1
-        img_right.save("pagess/" + str(x) + ".jpg")
+        img_right.save("pages/" + str(x) + ".jpg")
         x+=1
-        os.unlink("pagess/" + file)
+        #os.unlink("pagess/" + file)
     return True
 
 pages = list()
 start = round(datetime.now().timestamp())
-listOfFiles = os.listdir(path='pagess')
+listOfFiles = os.listdir(path='pages')
 listOfFiles = str(json.dumps(listOfFiles)).replace(".jpg", "")
 listOfFiles = json.loads(listOfFiles)
 listOfFiles = [int(i) for i in listOfFiles]
@@ -44,7 +45,7 @@ listOfFiles = [int(i) for i in listOfFiles]
 pages = sorted(listOfFiles)
 
 for x in pages:
-    pages[x] = ("pagess/" + str(x) + ".jpg")
+    pages[x] = ("pages/" + str(x) + ".jpg")
 
 window = Tk()
 window.title("BookReader v1.0")
@@ -138,10 +139,13 @@ threads = list()
 def readingThread():
     threading.Thread(target=startReading, daemon=True, args = ()).start()
 
+buttonFormatPages = ttk.Button(manageFrame, text ="Format Images", command=lambda:format())
+buttonFormatPages.grid(column=1, row=3)
+
 buttonStartReading = ttk.Button(manageFrame, text ="Start Reading", command=lambda:readingThread())
-buttonStartReading.grid(column=1, row=3)
+buttonStartReading.grid(column=1, row=4)
 
 buttonStopReading = ttk.Button(manageFrame, text ="Stop Reading", command=lambda:print(threads))
-buttonStopReading.grid(column=1, row=4)
+buttonStopReading.grid(column=1, row=5)
 
 window.mainloop()
